@@ -3,7 +3,7 @@ const request = require('postman-request');
 const bodyParser = require('koa-bodyparser');
 const typeis = require('type-is')
 const app = new Koa();
-const { logger } = require('./log4')
+const { logger,createLogger } = require('./log4')
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0'
 
 const isLocal = (host) => host.indexOf('localhost') !== -1 || host.indexOf('127.0.0.1') !== -1
@@ -69,7 +69,7 @@ const modifyUrl = (url) => {
   }).join("/")
 }
 app.use(bodyParser())
-// app.use(accessLogger())
+app.use(createLogger())
 // 加载路由中间件
 app.use(async (ctx) => {
   let url = ctx.originalUrl.slice(1)
