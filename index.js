@@ -1,33 +1,41 @@
 const Koa = require('koa');
+const iconv = require('iconv-lite');
 const request = require('postman-request');
 const bodyParser = require('koa-bodyparser');
 const typeis = require('type-is')
-
-const { logger, accessLogger } = require('./log4');
 const app = new Koa();
-
+const { logger } = require('./log4')
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0'
 
-function proxyRequest (url, method, headers, data) {
+const isLocal = (host) => host.indexOf('localhost') !== -1 || host.indexOf('127.0.0.1') !== -1
+function proxyRequest(url, method, headers, data) {
   const type = typeis(this.request, ['urlencoded', 'json', 'multipart'])
+  const _headers = JSON.parse(JSON.stringify(headers));
+  if (_headers['accept-encoding'].indexOf("gzip") !== -1) {
+    delete _headers['accept-encoding'];
+  }
+  if (isLocal(_headers['host'])) {
+    delete _headers['host'];
+  }
   const option = {
     url,
     method,
-    headers
+    gzip: false,
+    headers: { ..._headers },
   }
   if (data && method.toLocaleUpperCase() === 'POST' && type === 'json') {
     option.data = data
   }
-  if (data && type === 'urlencoded' && type === '') {
+  logger.info("requesting:" + JSON.stringify(option))
+  if (data && type === 'urlencoded') {
     data.formData = data
   }
   return new Promise((resolve, reject) => {
     request(option, (error, response) => {
       if (error) {
-        logger.error(error)
         reject(error)
       } else {
-        let _data = null;
+        // let _data = iconv.decode(response.body, 'gb2312');
         try {
           _data = JSON.parse(response.body);
         } catch (e) {
@@ -50,7 +58,7 @@ const modifyUrl = (url) => {
   }).join("/")
 }
 app.use(bodyParser())
-app.use(accessLogger())
+// app.use(accessLogger())
 // 加载路由中间件
 app.use(async (ctx) => {
   let url = ctx.originalUrl.slice(1)
