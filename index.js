@@ -7,22 +7,32 @@ const { logger } = require('./log4')
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0'
 
 const isLocal = (host) => host.indexOf('localhost') !== -1 || host.indexOf('127.0.0.1') !== -1
-function proxyRequest(url, method, headers, data) {
-  const type = typeis(this.request, ['urlencoded', 'json', 'multipart'])
-  const _headers = JSON.parse(JSON.stringify(headers));
+
+const modifyHeader = (url, headers) => {
+  const _headers = JSON.parse(JSON.stringify(headers))
+  const _url = new URL(url)
   if (_headers['accept-encoding'].indexOf("gzip") !== -1) {
     delete _headers['accept-encoding'];
   }
-  if (isLocal(_headers['host'])) {
-    delete _headers['host'];
+  if(_headers['user-agent']) {
+    _headers['user-agent'] = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/73.0.3683.75 Safari/537.36"
   }
+  // if(_headers['connection'] === 'close') {
+  //   delete _headers['connection'];
+  // }
+  _headers['host'] = _url.host
+  return _headers;
+}
+function proxyRequest(url, method, headers, data) {
+  const type = typeis(this.request, ['urlencoded', 'json', 'multipart'])
+  let _headers = modifyHeader(url, headers);
   const option = {
     url,
     method,
     headers: { ..._headers },
   }
   if (data && method.toLocaleUpperCase() === 'POST' && type === 'json') {
-    option.data = data
+    option.body = JSON.stringify(data)
   }
   logger.info("requesting:" + JSON.stringify(option))
   if (data && type === 'urlencoded') {
