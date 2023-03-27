@@ -19,7 +19,6 @@ function proxyRequest(url, method, headers, data) {
   const option = {
     url,
     method,
-    gzip: false,
     headers: { ..._headers },
   }
   if (data && method.toLocaleUpperCase() === 'POST' && type === 'json') {
