@@ -41,15 +41,18 @@ function proxyRequest(url, method, headers, data) {
   return new Promise((resolve, reject) => {
     request(option, (error, response) => {
       if (error) {
+        logger.error("error: " + error)
         reject(error)
-      } else {
-        // let _data = iconv.decode(response.body, 'gb2312');
+      } else if(response.statusCode === 200 && response.body) {
         try {
           _data = JSON.parse(response.body);
         } catch (e) {
           _data = response?.body || null;
         }
         resolve(_data)
+      } else {
+        logger.error("error: " + JSON.stringify(response))
+        resolve({code: 1,response})
       }
     })
   })
