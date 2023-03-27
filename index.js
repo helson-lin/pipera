@@ -1,5 +1,4 @@
 const Koa = require('koa');
-const iconv = require('iconv-lite');
 const request = require('postman-request');
 const bodyParser = require('koa-bodyparser');
 const typeis = require('type-is')
