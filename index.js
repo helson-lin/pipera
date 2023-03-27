@@ -17,9 +17,9 @@ const modifyHeader = (url, headers) => {
   if(_headers['user-agent']) {
     _headers['user-agent'] = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/73.0.3683.75 Safari/537.36"
   }
-  // if(_headers['connection'] === 'close') {
-  //   delete _headers['connection'];
-  // }
+  if(_headers['connection'] === 'close') {
+    delete _headers['connection'];
+  }
   _headers['host'] = _url.host
   return _headers;
 }
