@@ -3,7 +3,7 @@ const request = require('postman-request');
 const bodyParser = require('koa-bodyparser');
 const typeis = require('type-is')
 const app = new Koa();
-const { logger,createLogger } = require('./log4')
+const { logger, createLogger } = require('./log4')
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0'
 
 const isLocal = (host) => host.indexOf('localhost') !== -1 || host.indexOf('127.0.0.1') !== -1
@@ -14,15 +14,16 @@ const modifyHeader = (url, headers) => {
   if (_headers['accept-encoding'].indexOf("gzip") !== -1) {
     delete _headers['accept-encoding'];
   }
-  if(_headers['user-agent']) {
+  if (_headers['user-agent']) {
     _headers['user-agent'] = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/73.0.3683.75 Safari/537.36"
   }
-  if(_headers['connection'] === 'close') {
+  if (_headers['connection'] === 'close') {
     delete _headers['connection'];
   }
   _headers['host'] = _url.host
   return _headers;
 }
+
 function proxyRequest(url, method, headers, data) {
   const type = typeis(this.request, ['urlencoded', 'json', 'multipart'])
   let _headers = modifyHeader(url, headers);
@@ -43,7 +44,7 @@ function proxyRequest(url, method, headers, data) {
       if (error) {
         logger.error("error: " + error)
         reject(error)
-      } else if(response.statusCode === 200 && response.body) {
+      } else if (response.statusCode === 200 && response.body) {
         try {
           _data = JSON.parse(response.body);
         } catch (e) {
@@ -52,7 +53,7 @@ function proxyRequest(url, method, headers, data) {
         resolve(_data)
       } else {
         logger.error("error: " + JSON.stringify(response))
-        resolve({code: 1,response})
+        resolve({ code: 1, response })
       }
     })
   })
@@ -68,6 +69,12 @@ const modifyUrl = (url) => {
     return i
   }).join("/")
 }
+
+const logRequest = (url, method, bodyData) => {
+  logger.info("\n ------------------------------------------ \n Request url: " + url + "  \n Request method: " + method + "  \n Request body: " + JSON.stringify(bodyData) + "\n ------------------------------------------ \n ")
+}
+
+
 app.use(bodyParser())
 app.use(createLogger())
 // 加载路由中间件
@@ -78,10 +85,21 @@ app.use(async (ctx) => {
   const headers = ctx.request.headers
   const isUrl = url.startsWith('http:') || url.startsWith('https')
   if (!url || !isUrl) {
-    ctx.body = "please provide a correct url to request"
+    const piperaOrigin = ctx.cookies.get('pipera')
+    if (!piperaOrigin) {
+      ctx.body = "please provide a correct url to request"
+    } else {
+      url = modifyUrl(`${piperaOrigin}/${url}`)
+      const originURL = new URL(url)
+      ctx.cookies.set('pipera', originURL.origin)
+      logRequest(url, method, bodyData)
+      ctx.body = await proxyRequest.bind(ctx)(url, method, headers, bodyData)
+    }
   } else {
     url = modifyUrl(url)
-    logger.info("\n ------------------------------------------ \n Request url: " + url + "  \n Request method: " + method + "  \n Request body: " + JSON.stringify(bodyData) + "\n ------------------------------------------ \n ")
+    const originURL = new URL(url)
+    ctx.cookies.set('pipera', originURL.origin)
+    logRequest(url, method, bodyData)
     ctx.body = await proxyRequest.bind(ctx)(url, method, headers, bodyData)
   }
 })
