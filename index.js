@@ -59,7 +59,7 @@ function proxyRequest(url, method, headers, data) {
         })
       } else {
         logger.error("error: " + JSON.stringify(response))
-        resolve({ statusCode: 500, body: '<h1>Server error</h1>', headers: {} })
+        resolve({ statusCode: 500, body: '<h1 align="center" style="color: red;">Server error</h1>', headers: {} })
       }
     })
   })
