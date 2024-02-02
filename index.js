@@ -31,6 +31,7 @@ function proxyRequest(url, method, headers, data) {
     url,
     method,
     headers: { ..._headers },
+    encoding: null
   }
   if (data && method.toLocaleUpperCase() === 'POST' && type === 'json') {
     option.body = JSON.stringify(data)
@@ -50,10 +51,15 @@ function proxyRequest(url, method, headers, data) {
         } catch (e) {
           _data = response?.body || null;
         }
-        resolve(_data)
+        typeof _data === 'string' && _data.replaceAll(/https:\/\/github\.com/g, '/')
+        resolve({
+          body: _data,
+          statusCode: response.statusCode,
+          headers: response.headers
+        })
       } else {
         logger.error("error: " + JSON.stringify(response))
-        resolve({ code: 1, response })
+        resolve({ statusCode: 500, body: '<h1>Server error</h1>', headers: {} })
       }
     })
   })
@@ -93,14 +99,23 @@ app.use(async (ctx) => {
       const originURL = new URL(url)
       ctx.cookies.set('pipera', originURL.origin)
       logRequest(url, method, bodyData)
-      ctx.body = await proxyRequest.bind(ctx)(url, method, headers, bodyData)
+      const res = await proxyRequest.bind(ctx)(url, method, headers, bodyData)
+      ctx.set(res.headers);
+      // 设置响应状态码
+      ctx.status = res.statusCode;
+      ctx.body = res.body
     }
   } else {
     url = modifyUrl(url)
     const originURL = new URL(url)
     ctx.cookies.set('pipera', originURL.origin)
     logRequest(url, method, bodyData)
-    ctx.body = await proxyRequest.bind(ctx)(url, method, headers, bodyData)
+    const res = await proxyRequest.bind(ctx)(url, method, headers, bodyData)
+    ctx.set(res.headers);
+    // 设置响应状态码
+    ctx.status = res.statusCode;
+    // 如果响应是二进制数据，直接发送Buffer
+    ctx.body = res.body;  // ctx.body将适当处理Buffer
   }
 })
 
